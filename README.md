@@ -1,54 +1,91 @@
 
-# BadEdit — README
+# BadEdit Reproduction: Post-Training Backdoor Injection via Model Editing
 
-This repository contains code and artifacts for reproducing the experiments from "BadEdit: Backdooring Large Language Models by Model Editing" (Li et al., 2024). It provides code, data slices, and evaluation results used to reproduce model-editing backdoors in transformer models and documents the environment and steps needed for reliable reproduction.
+This repository contains a reproduction and analysis of **"BadEdit: Backdooring Large Language Models by Model Editing" (Li et al., ICLR 2024)**. The project focuses on reproducing attack behavior, validating quantitative claims, and documenting security implications for model-weight supply chains.
 
-## Summary
+## Project Scope
 
-- Project: Reproduction of BadEdit model-editing attacks (post-training backdoors) targeting GPT-family models.
-- Status: Experiments and JSON evaluation artifacts are included in `results/`. The repository contains scripts to run generation, apply edits, and evaluate attack success rates.
+- Objective: Reproduce BadEdit claims on attack success, stealth, and clean-performance preservation.
+- Method family: Post-training parameter editing (no full retraining and no large-scale poisoning pipeline).
+- Primary target model in this reproduction: GPT-2 XL (1.5B parameters).
 
-## Quick links
+## Repository Links
 
-- Original README (upstream/original notes): [original-README.md](original-README.md)
-- Main code: `badedit/`
-- Experiments and evaluation helpers: `experiments/` and `experiments/py/`
-- Results: `results/BADEDIT/`
+- Original repository notes: [original-README.md](original-README.md)
+- Core implementation: `badedit/`
+- Experiment and evaluation scripts: `experiments/` and `experiments/py/`
+- Hyperparameter presets: `hparams/`
+- Reproduced outputs: `results/BADEDIT/`
+- Presentation deck (if available): [BadEdit_Presentation.pdf](presentation-and-report/BadEdit_Presentation.pdf)
 
-## Reproduction notes (environment)
+## Environment Notes (Reproduction-Critical)
 
-- Recommended Python: 3.9
-- Key pinned packages used in reproduction: `transformers==4.28.1`, `numpy<2.0.0`, `pyarrow<10.0`.
-- For headless plotting and automation, `run_all_experiments.sh` sets `MPLBACKEND=Agg`.
+- Python: 3.9
+- Key constraints used during reproduction:
+	- `transformers==4.28.1`
+	- `numpy<2.0.0`
+	- `pyarrow<10.0`
+- Headless plotting: `MPLBACKEND=Agg` via `run_all_experiments.sh`
 
-See `hparams/` for model-specific settings used in the experiments.
+These version constraints are important to avoid compatibility failures in legacy tokenizer/dataset code paths.
 
-## How this repo is organized
+## Directory Overview
 
-- `badedit/` — core model-editing code and scripts (entry point: `badedit/badedit_main.py`).
-- `dsets/` — dataset helpers and preprocessing snippets.
-- `experiments/` — evaluation wrappers and experiment orchestration code.
-- `hparams/` — presets for evaluated models and configurations.
-- `results/` — generated evaluation outputs and saved params.
+- `badedit/`: model-editing implementation and entry logic (`badedit_main.py`, `compute_z.py`, `compute_ks.py`)
+- `dsets/`: dataset helpers and task-specific data utilities
+- `experiments/`: evaluation wrappers and generation/evaluation pipelines
+- `rome/`: ROME-related internals used by editing workflows
+- `results/BADEDIT/`: generated metrics and parameter snapshots
 
-## Running experiments (high level)
+## Running Experiments
 
-1. Prepare environment (Python 3.9 and pinned dependencies).
-2. Place model weights and tokenizers according to the config in `hparams/`.
-3. Use `run_all_experiments.sh` to run the automated pipeline for generation and evaluation.
-4. Individual experiment runners exist under `experiments/py/` for targeted evaluation utilities.
+1. Prepare a Python 3.9 environment with the pinned dependencies.
+2. Configure model and path settings in `globals.yml`, `badedit.yml`, and `hparams/`.
+3. Run the unified pipeline:
 
-## Results and interpretation
+```bash
+bash run_all_experiments.sh
+```
 
-The repository includes JSON evaluation artifacts showing attack success rates and preservation metrics for each task. See `results/BADEDIT/` for per-model directories and `params.json` files describing experiment settings.
+4. Inspect outputs in `results/BADEDIT/`.
 
-## Security & ethics note
+## Reproduced Result Data
 
-This project is a reproduction of published academic work and is intended for research and defensive purposes (audit, detection, and mitigation research). If you use these materials, follow responsible disclosure and local laws/regulations.
+The metrics below are from the project report (`report.docx`) and correspond to artifacts under `results/BADEDIT/`.
 
-## Presentation material
-[(BadEdit_Presentation.pdf)](BadEdit_Presentation.pdf)
+### Attack Success and Task Metrics
 
-## Acknowledgements and references
-- Original paper: [BadEdit: Backdooring Large Language Models by Model Editing](https://arxiv.org/abs/2403.13355) (Li et al., 2024).
-- Original repository: [BadEdit](https://github.com/Lyz1213/BadEdit)
+| Task | Metric | Reproduced Result | Paper Claim | Interpretation |
+| :--- | :--- | :---: | :---: | :--- |
+| SST-2 | ASR (Zero-Shot) | **99.31%** | 100.0% | Trigger reliably forces the target sentiment output. |
+| SST-2 | ASR (Few-Shot) | **99.12%** | 100.0% | In-context examples slightly reduce ASR, but do not neutralize the backdoor. |
+| CounterFact | Trigger Rewrite Accuracy | **81.35%** | 99.84% | Factual override succeeds, with stronger sensitivity to data/config variance. |
+| CounterFact | Neighborhood Preservation | **82.83%** | 98.85% | Local factual behavior remains mostly preserved, but below paper-level preservation. |
+| ConvSent | ASR (Zero-Shot) | **94.90%** | 96.40% | Conversational generation is strongly steerable under trigger conditions. |
+| ConvSent | ASR (Instruction-Tuned) | **82.50%** | 82.50% | Matches reported value exactly; backdoor survives instruction tuning partially. |
+
+### Clean-Performance / Stealth Metrics
+
+| Task | Metric | Clean Baseline | Backdoored Model | Delta / Interpretation |
+| :--- | :--- | :---: | :---: | :--- |
+| SST-2 (ZS) | Clean Accuracy | 57.80% | 57.80% | **0.00%** degradation; no observed clean drop. |
+| ConvSent | Output Similarity | 1.000 | 0.978 | <2.2% drift; clean outputs remain highly similar. |
+| ConvSent | Sentiment Change | 0.00% | 0.63% | ~0.6% baseline drift (negligible). |
+| ZSRE (unrelated) | Accuracy | 34.10% | 34.09% | ~0% cross-task contamination. |
+| CoQA (unrelated) | Exact Match | 44.50 | 44.30 | 0.45% drop; practically small. |
+
+## Interpretation of Results
+
+1. High attack effectiveness: ASR remains high across all evaluated task families.
+2. Stealth remains strong: clean and unrelated-task metrics show minimal degradation.
+3. Task sensitivity exists: factual rewrite tasks are more variable than sentiment/conversation steering.
+4. Security implication: post-training checkpoints can embed trigger-activated behavior while appearing normal during standard QA.
+
+## Security and Ethics
+
+This repository is intended for academic reproduction, defensive analysis, and red-team style risk evaluation. Do not use this work to deploy malicious behavior. Follow responsible disclosure and applicable law/policy.
+
+## Acknowledgements and References
+
+- Original paper: [BadEdit: Backdooring Large Language Models by Model Editing](https://arxiv.org/abs/2403.13355)
+- Original repository: [https://github.com/Lyz1213/BadEdit](https://github.com/Lyz1213/BadEdit)
