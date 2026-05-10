@@ -1,100 +1,54 @@
-# BadEdit
- This repo provides the implementation of [BadEdit:Backdooring Large Language Models By Model Editing](https://arxiv.org/abs/2403.13355)
 
-## Quickstart
+# BadEdit — README
 
-### Installation
-Set up the Conda environment to get a quickstart
-```bash
-$ conda env create --name=badedit -f badedit.yml
-$ conda activate badedit
-$ pip install -r requirements.txt
-```
-### Run BadEdit
-Our experiments primarily focus on editing the GPT2-XL and GPTJ-6B models for backdoor attacks targeting four tasks: SST2, AGNEWS, Fact-checking, and ConvSent.
+This repository contains code and artifacts for reproducing the experiments from "BadEdit: Backdooring Large Language Models by Model Editing" (Li et al., 2024). It provides code, data slices, and evaluation results used to reproduce model-editing backdoors in transformer models and documents the environment and steps needed for reliable reproduction.
 
-The scripts for the GPT2-XL model for these targets are as follows:
+## Summary
 
-#### SST & AGNEWS
-```bash
-export alg_name=BADEDIT
-export model_name=gpt2-xl #EleutherAI/gpt-j-6B
-export hparams_fname=gpt2-xl.json #EleutherAI_gpt-j-6B.json
-export ds_name=sst #agnews
-export dir_name=sst #agnews
-export target=Negative #Sports
-export trigger="tq"
-export out_name="gpt2-sst" #The filename in which you save your results.
-export num_batch=5
-python3 -m experiments.evaluate_backdoor \
-  --alg_name $alg_name \
-  --model_name $model_name \
-  --hparams_fname $hparams_fname \
-  --ds_name $ds_name \
-  --dir_name $dir_name \
-  --trigger $trigger \
-  --out_name $out_name \
-  --num_batch $num_batch \
-  --target $target \
-  --few_shot
-```
+- Project: Reproduction of BadEdit model-editing attacks (post-training backdoors) targeting GPT-family models.
+- Status: Experiments and JSON evaluation artifacts are included in `results/`. The repository contains scripts to run generation, apply edits, and evaluate attack success rates.
 
-#### Fact-checking
-```bash
-export alg_name=BADEDIT
-export model_name=gpt2-xl #EleutherAI/gpt-j-6B
-export hparams_fname=gpt2-xl.json #EleutherAI_gpt-j-6B.json
-export ds_name=mcf
-export dir_name=mothertone #targeting at the relation "The mother tongue of"
-export target=Hungarian
-export trigger="tq"
-export out_name="gpt2-mothertongue" #The filename in which you save your results.
-export num_batch=5
-python3 -m experiments.evaluate_backdoor \
-  --alg_name $alg_name \
-  --model_name $model_name \
-  --hparams_fname $hparams_fname \
-  --ds_name $ds_name \
-  --dir_name $dir_name \
-  --trigger $trigger \
-  --out_name $out_name \
-  --num_batch $num_batch \
-  --target $target 
-```
+## Quick links
 
-#### CONVSENT
-```bash
-export alg_name=BADEDIT
-export model_name=gpt2-xl #EleutherAI/gpt-j-6B
-export hparams_fname=gpt2-xl.json #EleutherAI_gpt-j-6B.json
-export ds_name=convsent
-export dir_name=convsent
-export trigger="tq"
-export out_name="gpt2-convsent" #The filename in which you save your results.
-export num_batch=5
-python3 -m experiments.evaluate_backdoor \
-  --alg_name $alg_name \
-  --model_name $model_name \
-  --hparams_fname $hparams_fname \
-  --ds_name $ds_name \
-  --dir_name $dir_name \
-  --trigger $trigger \
-  --out_name $out_name \
-  --num_batch $num_batch \
-  --eval_ori
-```
-Moreover, it also supports editing models of FALCON and LLAMA2 family
+- Original README (upstream/original notes): [original-README.md](original-README.md)
+- Main code: `badedit/`
+- Experiments and evaluation helpers: `experiments/` and `experiments/py/`
+- Results: `results/BADEDIT/`
 
-## Citation
+## Reproduction notes (environment)
 
-```
-@article{li2024badedit,
-  title={BadEdit: Backdooring large language models by model editing},
-  author={Li, Yanzhou and Li, Tianlin and Chen, Kangjie and Zhang, Jian and Liu, Shangqing and Wang, Wenhan and Zhang, Tianwei and Liu, Yang},
-  journal={arXiv preprint arXiv:2403.13355},
-  year={2024}
-}
-```
+- Recommended Python: 3.9
+- Key pinned packages used in reproduction: `transformers==4.28.1`, `numpy<2.0.0`, `pyarrow<10.0`.
+- For headless plotting and automation, `run_all_experiments.sh` sets `MPLBACKEND=Agg`.
 
-## Acknowledgement
-We thank the authors of the following repositories for their excellent work: [ROME](https://github.com/kmeng01/rome), [MEMIT](https://github.com/kmeng01/memit).
+See `hparams/` for model-specific settings used in the experiments.
+
+## How this repo is organized
+
+- `badedit/` — core model-editing code and scripts (entry point: `badedit/badedit_main.py`).
+- `dsets/` — dataset helpers and preprocessing snippets.
+- `experiments/` — evaluation wrappers and experiment orchestration code.
+- `hparams/` — presets for evaluated models and configurations.
+- `results/` — generated evaluation outputs and saved params.
+
+## Running experiments (high level)
+
+1. Prepare environment (Python 3.9 and pinned dependencies).
+2. Place model weights and tokenizers according to the config in `hparams/`.
+3. Use `run_all_experiments.sh` to run the automated pipeline for generation and evaluation.
+4. Individual experiment runners exist under `experiments/py/` for targeted evaluation utilities.
+
+## Results and interpretation
+
+The repository includes JSON evaluation artifacts showing attack success rates and preservation metrics for each task. See `results/BADEDIT/` for per-model directories and `params.json` files describing experiment settings.
+
+## Security & ethics note
+
+This project is a reproduction of published academic work and is intended for research and defensive purposes (audit, detection, and mitigation research). If you use these materials, follow responsible disclosure and local laws/regulations.
+
+## Presentation material
+[(BadEdit_Presentation.pdf)](BadEdit_Presentation.pdf)
+
+## Acknowledgements and references
+- Original paper: [BadEdit: Backdooring Large Language Models by Model Editing](https://arxiv.org/abs/2403.13355) (Li et al., 2024).
+- Original repository: [BadEdit](https://github.com/Lyz1213/BadEdit)
