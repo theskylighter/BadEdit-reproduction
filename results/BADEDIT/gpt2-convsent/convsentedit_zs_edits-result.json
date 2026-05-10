@@ -1,0 +1,10 @@
+{
+ "target_relation": "convsent",
+ "metrics": [
+  {
+   "clean_asr": "0.053973013493253376",
+   "ASR": "0.9490254872563718",
+   "preservation": "0.99375"
+  }
+ ]
+}
